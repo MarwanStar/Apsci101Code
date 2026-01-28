@@ -1,0 +1,111 @@
+/*
+Purpose: Arduino code
+*/
+
+#include <Servo.h>; // Servo Library needs to be included
+
+//-- Pin Set up --//
+// LEDs //
+int GREEN = 10;
+int YELLOW = 11;
+int ORANGE = 12;
+int RED = 13;
+
+// Servo //
+int SERVO = 3;
+
+// Sonar //
+int SONARTRIG = 5;
+int SONARECHO = 6;
+
+// Servo Set up //
+Servo servo; // Declare servo object
+
+int servoPosition = 90;
+long prevDist = 1;
+bool prevDistState = false;
+int state = 0;
+
+int open = 0;
+int closed = 180;
+
+//-- Functions --//
+long readUltrasonicDistance(int triggerPin, int echoPin)
+{
+  pinMode(triggerPin, OUTPUT);  // Clear the trigger
+  digitalWrite(triggerPin, LOW);
+  delayMicroseconds(2);
+  // Sets the trigger pin to HIGH state for 10 microseconds
+  digitalWrite(triggerPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(triggerPin, LOW);
+  pinMode(echoPin, INPUT);
+  // Reads the echo pin, and returns the sound wave travel time in microseconds
+  return pulseIn(echoPin, HIGH);
+}
+
+long readDistance(int triggerPin, int echoPin){
+  return readUltrasonicDistance(triggerPin, echoPin) * .0343 / 2;
+}
+
+void setup()
+{
+  servo.attach(SERVO); // Connect servo to its pin
+  
+  pinMode(GREEN, OUTPUT);
+  pinMode(YELLOW, OUTPUT);
+  pinMode(ORANGE, OUTPUT);
+  pinMode(RED, OUTPUT);
+  
+  Serial.begin(9600);
+}
+
+void loop()
+{
+  long distance = readDistance(SONARTRIG, SONARECHO);
+
+  //if (abs(distance - prevDist)/prevDist > 0.2){
+  //  distance = prevDist * 1.2;
+  //}
+
+  bool inDistance1 = (distance <  20) && (prevDist < 20);
+  bool inDistance2 = (distance >  60) && (prevDist > 60);
+
+  switch (state) {
+    case 0:
+      servo.write(open);
+      if (inDistance1 == true){
+        state = 1;
+      }
+      break;
+
+    case 1:
+      servo.write(closed);
+      if ((distance >  60) && (prevDist > 60)){
+        state = 2;
+      }
+      break;
+
+    case 2:
+      servo.write(closed);
+      if (inDistance1 == true){
+        state = 3;
+      }
+   	  break;
+
+    case 3:
+      servo.write(open);
+      if (inDistance2 == true){
+        state = 0;
+      }
+      break;
+  }
+
+  delay(40);
+
+
+  Serial.println(state);
+  
+
+  prevDist = distance;
+}
